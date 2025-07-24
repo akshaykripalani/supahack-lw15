@@ -16,7 +16,7 @@ function App() {
         width: '100vw',
         display: 'flex',
         alignItems: 'stretch',
-        background: 'linear-gradient(120deg, #a18cd1 0%, #fbc2eb 100%)',
+        background: '#f7f5fa',
       }}
     >
       <aside
@@ -38,10 +38,8 @@ function App() {
             fontWeight: 800,
             fontSize: 32,
             letterSpacing: 1,
-            background: 'linear-gradient(90deg, #a18cd1, #fbc2eb)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
             marginBottom: 8,
+            color: '#181818',
           }}
         >
           LLM Breakout
@@ -55,7 +53,7 @@ function App() {
               border: '1.5px solid #a18cd1',
               fontSize: 16,
               outline: 'none',
-              color: '#4a3f6b',
+              color: '#181818',
               background: '#f7f5fa',
               transition: 'border 0.2s',
               boxShadow: '0 1px 4px 0 rgba(161,140,209,0.07)',
@@ -63,6 +61,15 @@ function App() {
             placeholder="Enter a creative prompt..."
             value={promptInput}
             onChange={(e) => setPromptInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (
+                e.key === 'Enter' &&
+                promptInput &&
+                gameState !== 'loading'
+              ) {
+                startGame(promptInput);
+              }
+            }}
           />
           <button
             style={{
@@ -70,7 +77,7 @@ function App() {
               padding: '12px 0',
               borderRadius: 8,
               border: 'none',
-              background: 'linear-gradient(90deg, #a18cd1, #fbc2eb)',
+              background: '#7b4397',
               color: '#fff',
               fontWeight: 700,
               fontSize: 18,
@@ -89,24 +96,24 @@ function App() {
         <div
           style={{
             marginTop: 8,
-            background: 'linear-gradient(90deg, #fbc2eb 0%, #a6c1ee 100%)',
+            background: '#e9e4f0',
             borderRadius: 10,
             padding: '18px 16px',
             boxShadow: '0 2px 8px 0 rgba(161,140,209,0.08)',
-            color: '#4a3f6b',
+            color: '#181818',
             fontWeight: 500,
             fontSize: 18,
             textAlign: 'center',
           }}
         >
-          <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 4 }}>
+          <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 4, color: '#181818' }}>
             Score: <span style={{ color: '#7b4397' }}>{score}%</span>
           </div>
-          <div style={{ fontSize: 16, marginTop: 2 }}>
+          <div style={{ fontSize: 16, marginTop: 2, color: '#181818' }}>
             State: <span style={{ color: gameState === 'playing' ? '#43cea2' : gameState === 'loading' ? '#f7971e' : '#7b4397' }}>{gameState}</span>
           </div>
         </div>
-        <div style={{ marginTop: 12, textAlign: 'center', color: '#7b4397', fontSize: 14, opacity: 0.7 }}>
+        <div style={{ marginTop: 12, textAlign: 'center', color: '#181818', fontSize: 14, opacity: 0.7 }}>
           <span>Tip: Try prompts like "A neon city at night" or "A robot's morning routine"</span>
         </div>
       </aside>
@@ -116,7 +123,7 @@ function App() {
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          background: 'linear-gradient(120deg, #a6c1ee 0%, #fbc2eb 100%)',
+          background: '#f7f5fa',
         }}
       >
         <GameCanvas />

@@ -8,7 +8,8 @@ const PADDLE_WIDTH = 100;
 const PADDLE_HEIGHT = 12;
 const PADDLE_Y = CANVAS_HEIGHT - 40;
 const BALL_RADIUS = 8;
-const BALL_SPEED = 4;
+const BASE_BALL_SPEED = 8;
+const MAX_BALL_SPEED = 8;
 
 export const GameCanvas: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -25,40 +26,64 @@ export const GameCanvas: React.FC = () => {
   const ballVel = useRef({ x: 3, y: -3 });
 
   // Draw helper
-  const drawFrame = (ctx: CanvasRenderingContext2D, bricksToRender: Brick[]) => {
-    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+const drawFrame = (ctx: CanvasRenderingContext2D, bricksToRender: Brick[]) => {
+  // Draw solid background
+  ctx.fillStyle = '#232526';
+  ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-    // Draw bricks
-    bricksToRender.forEach((brick) => {
-      if (brick.destroyed) return;
-      // Filled background with 25% opacity
-      ctx.fillStyle = brick.color.replace(')', ' / 0.25)');
-      ctx.fillRect(brick.x, brick.y, brick.width, brick.height);
-
-      // Border
-      ctx.strokeStyle = brick.color;
-      ctx.lineWidth = 2;
-      ctx.strokeRect(brick.x, brick.y, brick.width, brick.height);
-
-      // Word text (centered)
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '12px Arial';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(brick.text, brick.x + brick.width / 2, brick.y + brick.height / 2);
-    });
-
-    // Draw paddle
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(paddleX.current, PADDLE_Y, PADDLE_WIDTH, PADDLE_HEIGHT);
-
-    // Draw ball
-    ctx.beginPath();
-    ctx.arc(ballPos.current.x, ballPos.current.y, BALL_RADIUS, 0, Math.PI * 2);
-    ctx.fillStyle = '#fff';
+  // Draw bricks with solid color and rounded corners
+  bricksToRender.forEach((brick) => {
+    if (brick.destroyed) return;
+    ctx.save();
+    // Brick fill (solid)
+    ctx.fillStyle = brick.color;
+    roundRect(ctx, brick.x, brick.y, brick.width, brick.height, 7);
     ctx.fill();
-    ctx.closePath();
-  };
+    // Border
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#222';
+    roundRect(ctx, brick.x, brick.y, brick.width, brick.height, 7);
+    ctx.stroke();
+    // Word text (centered, bold, no shadow)
+    ctx.font = 'bold 13px "Segoe UI", Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#fff';
+    ctx.fillText(brick.text, brick.x + brick.width / 2, brick.y + brick.height / 2);
+    ctx.restore();
+  });
+
+  // Draw paddle (solid color)
+  ctx.save();
+  ctx.fillStyle = '#a18cd1';
+  roundRect(ctx, paddleX.current, PADDLE_Y, PADDLE_WIDTH, PADDLE_HEIGHT, 8);
+  ctx.fill();
+  ctx.restore();
+
+  // Draw ball (solid color)
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(ballPos.current.x, ballPos.current.y, BALL_RADIUS, 0, Math.PI * 2);
+  ctx.fillStyle = '#fff';
+  ctx.fill();
+  ctx.closePath();
+  ctx.restore();
+};
+
+// Helper for rounded rectangles
+function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
 
   const bricksRef = useRef<Brick[]>(bricks);
 
@@ -73,8 +98,30 @@ export const GameCanvas: React.FC = () => {
     if (!ctx) return;
 
     if (gameState !== 'running') {
-      // Clear canvas when not running
-      ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      // Draw background
+      ctx.fillStyle = '#232526';
+      ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+      // Draw message
+      ctx.save();
+      ctx.font = 'bold 40px "Segoe UI", Arial, sans-serif';
+      ctx.fillStyle = '#fff';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('Game Over', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 30);
+
+      // Show score if available
+      const totalBricks = bricksRef.current.length;
+      const destroyedBricks = bricksRef.current.filter(b => b.destroyed).length;
+      const percent = totalBricks > 0 ? Math.round((destroyedBricks / totalBricks) * 100) : 0;
+      ctx.font = 'bold 28px "Segoe UI", Arial, sans-serif';
+      ctx.fillStyle = '#a18cd1';
+      ctx.fillText(`Score: ${percent}%`, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 20);
+
+      ctx.font = '20px "Segoe UI", Arial, sans-serif';
+      ctx.fillStyle = '#fff';
+      ctx.fillText('Press Start / Restart to play again', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 60);
+      ctx.restore();
       return;
     }
 
@@ -153,10 +200,18 @@ export const GameCanvas: React.FC = () => {
         return; // stop loop
       }
 
+
+      // Calculate percentage completed
+      const totalBricks = bricksRef.current.length;
+      const destroyedBricks = bricksRef.current.filter(b => b.destroyed).length;
+      const percentComplete = totalBricks > 0 ? destroyedBricks / totalBricks : 0;
+      // Ball speed increases linearly from BASE_BALL_SPEED to MAX_BALL_SPEED
+      const currentBallSpeed = BASE_BALL_SPEED + (MAX_BALL_SPEED - BASE_BALL_SPEED) * percentComplete;
+
       // Ensure ball speed constant
       const mag = Math.hypot(ballVel.current.x, ballVel.current.y);
-      ballVel.current.x = (ballVel.current.x / mag) * BALL_SPEED;
-      ballVel.current.y = (ballVel.current.y / mag) * BALL_SPEED;
+      ballVel.current.x = (ballVel.current.x / mag) * currentBallSpeed;
+      ballVel.current.y = (ballVel.current.y / mag) * currentBallSpeed;
 
       drawFrame(ctx, bricksRef.current);
       animationId = requestAnimationFrame(stepLoop);
@@ -165,7 +220,7 @@ export const GameCanvas: React.FC = () => {
     // Reset paddle & ball positions at start of run
     paddleX.current = (CANVAS_WIDTH - PADDLE_WIDTH) / 2;
     ballPos.current = { x: CANVAS_WIDTH / 2, y: PADDLE_Y - BALL_RADIUS - 2 };
-    ballVel.current = { x: BALL_SPEED, y: -BALL_SPEED };
+    ballVel.current = { x: BASE_BALL_SPEED, y: -BASE_BALL_SPEED };
 
     drawFrame(ctx, bricksRef.current);
     animationId = requestAnimationFrame(stepLoop);
@@ -182,7 +237,16 @@ export const GameCanvas: React.FC = () => {
       ref={canvasRef}
       width={CANVAS_WIDTH}
       height={CANVAS_HEIGHT}
-      style={{ border: '1px solid #ccc', background: '#000' }}
+      style={{
+        borderRadius: 18,
+        boxShadow: '0 8px 32px 0 rgba(161,140,209,0.18)',
+        border: '2.5px solid #a18cd1',
+        background: 'transparent',
+        outline: 'none',
+        margin: 0,
+        display: 'block',
+      }}
+      tabIndex={0}
     />
   );
 }; 
