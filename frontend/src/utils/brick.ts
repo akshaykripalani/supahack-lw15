@@ -7,6 +7,7 @@ export interface Brick {
   height: number;
   color: string;
   destroyed: boolean;
+  visible: boolean;
 }
 
 function clamp(value: number, min: number, max: number) {
@@ -94,6 +95,7 @@ export function paragraphToBricks(
       height,
       color,
       destroyed: false,
+      visible: false,
     });
 
     xCursor += width + hPad;

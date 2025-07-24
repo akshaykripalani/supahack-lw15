@@ -3,7 +3,7 @@ import type { Brick } from '../utils/brick';
 import { paragraphToBricks } from '../utils/brick';
 import { fetchLayout } from '../api/layout';
 
-type GameState = 'idle' | 'loading' | 'running' | 'over';
+type GameState = 'idle' | 'loading' | 'animating' | 'running' | 'over';
 
 interface GameStore {
   bricks: Brick[];
@@ -14,8 +14,10 @@ interface GameStore {
   startTime: number | null;
   lives: number;
   gameState: GameState;
+  animationIndex: number; // index of next brick to reveal
   startGame: (prompt: string) => Promise<void>;
   destroyBrick: (id: number) => void;
+  revealNext: () => void;
   endGame: () => void;
   loseLife: () => void;
 }
@@ -29,6 +31,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   startTime: null,
   lives: 3,
   gameState: 'idle',
+  animationIndex: 0,
 
   startGame: async (prompt: string) => {
     set({ gameState: 'loading', prompt });
@@ -42,7 +45,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
         score: 0,
         startTime: performance.now(),
         lives: 3,
-        gameState: 'running',
+        animationIndex: 0,
+        gameState: 'animating',
       });
     } catch (err) {
       console.error(err);
@@ -64,6 +68,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     if (newDestroyed === totalBricks) {
       get().endGame();
+    }
+  },
+
+  revealNext: () => {
+    const { animationIndex, bricks } = get();
+    if (animationIndex >= bricks.length) return;
+    const updated = bricks.slice();
+    updated[animationIndex] = { ...updated[animationIndex], visible: true };
+    set({ bricks: updated, animationIndex: animationIndex + 1 });
+
+    if (animationIndex + 1 === bricks.length) {
+      // animation finished
+      set({ gameState: 'running' });
     }
   },
 

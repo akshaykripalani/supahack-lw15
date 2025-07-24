@@ -4,12 +4,14 @@ import type { Brick } from '../utils/brick';
 
 const CANVAS_WIDTH = 800;
 const CANVAS_HEIGHT = 600;
-const PADDLE_WIDTH = 100;
-const PADDLE_HEIGHT = 12;
-const PADDLE_Y = CANVAS_HEIGHT - 40;
+const PADDLE_WIDTH = 140; // wider paddle
+const PADDLE_HEIGHT = 18; // thicker paddle
+const BOTTOM_MARGIN = 36; // 10% reduction from 40px
+const PADDLE_Y = CANVAS_HEIGHT - BOTTOM_MARGIN;
 const BALL_RADIUS = 8;
-const BASE_BALL_SPEED = 8;
-const MAX_BALL_SPEED = 8;
+const BASE_BALL_SPEED = 7; // 10% slower than previous 8
+const MAX_BALL_SPEED = 7;
+const MIN_BALL_X_SPEED = 1; // avoid perfectly vertical trajectories
 
 export const GameCanvas: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -17,9 +19,10 @@ export const GameCanvas: React.FC = () => {
   // Zustand bindings
   const bricks = useGameStore((s) => s.bricks);
   const gameState = useGameStore((s) => s.gameState);
+  const revealNext = useGameStore((s) => s.revealNext);
   const destroyBrick = useGameStore((s) => s.destroyBrick);
   const loseLife = useGameStore((s) => s.loseLife);
-  const lives = useGameStore((s) => s.lives);
+  // fetch fresh lives each render inside loop
   // endGame currently handled through loseLife
 
   // Persistent refs for paddle and ball state (avoid rerenders)
@@ -37,6 +40,7 @@ export const GameCanvas: React.FC = () => {
     // Draw bricks with solid color and rounded corners
     bricksToRender.forEach((brick) => {
       if (brick.destroyed) return;
+      if (!brick.visible) return;
       ctx.save();
       // Brick fill (solid)
       ctx.fillStyle = brick.color;
@@ -100,6 +104,23 @@ export const GameCanvas: React.FC = () => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    if (gameState === 'animating') {
+      // stream in bricks
+      const timer = setInterval(() => {
+        revealNext();
+      }, 40);
+
+      const animDraw = () => {
+        drawFrame(ctx, bricksRef.current);
+        if (useGameStore.getState().gameState === 'animating') {
+          requestAnimationFrame(animDraw);
+        }
+      };
+      animDraw();
+
+      return () => clearInterval(timer);
+    }
+
     if (gameState !== 'running') {
       // Draw background
       ctx.fillStyle = '#232526';
@@ -148,6 +169,8 @@ export const GameCanvas: React.FC = () => {
     const leftPressed = { current: false };
     const rightPressed = { current: false };
 
+    const getLives = () => useGameStore.getState().lives;
+
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft') leftPressed.current = true;
       if (e.key === 'ArrowRight') rightPressed.current = true;
@@ -170,9 +193,13 @@ export const GameCanvas: React.FC = () => {
       ballPos.current.x += ballVel.current.x;
       ballPos.current.y += ballVel.current.y;
 
-      // Wall collisions
-      if (ballPos.current.x - BALL_RADIUS < 0 || ballPos.current.x + BALL_RADIUS > CANVAS_WIDTH) {
-        ballVel.current.x *= -1;
+      // Wall collisions (left / right)
+      if (ballPos.current.x - BALL_RADIUS < 0) {
+        ballPos.current.x = BALL_RADIUS; // nudge inside the canvas
+        ballVel.current.x = Math.max(Math.abs(ballVel.current.x), MIN_BALL_X_SPEED);
+      } else if (ballPos.current.x + BALL_RADIUS > CANVAS_WIDTH) {
+        ballPos.current.x = CANVAS_WIDTH - BALL_RADIUS;
+        ballVel.current.x = -Math.max(Math.abs(ballVel.current.x), MIN_BALL_X_SPEED);
       }
       if (ballPos.current.y - BALL_RADIUS < 0) {
         ballVel.current.y *= -1;
@@ -189,7 +216,12 @@ export const GameCanvas: React.FC = () => {
 
         // Add some x-variation based on hit position
         const hitPos = (ballPos.current.x - (paddleX.current + PADDLE_WIDTH / 2)) / (PADDLE_WIDTH / 2);
-        ballVel.current.x = hitPos * 4;
+        let newX = hitPos * 4;
+        // Ensure some horizontal component so the ball doesn’t get stuck bouncing vertically
+        if (Math.abs(newX) < MIN_BALL_X_SPEED) {
+          newX = newX >= 0 ? MIN_BALL_X_SPEED : -MIN_BALL_X_SPEED;
+        }
+        ballVel.current.x = newX;
       }
 
       // Brick collisions (simple AABB check)
@@ -209,9 +241,10 @@ export const GameCanvas: React.FC = () => {
 
       // Floor collision → lose life or game over
       if (ballPos.current.y - BALL_RADIUS > CANVAS_HEIGHT) {
+        const currentLives = getLives();
         loseLife();
 
-        if (lives - 1 > 0) {
+        if (currentLives - 1 > 0) {
           // reset ball & paddle positions and relaunch straight up
           paddleX.current = (CANVAS_WIDTH - PADDLE_WIDTH) / 2;
           ballPos.current = { x: CANVAS_WIDTH / 2, y: PADDLE_Y - BALL_RADIUS - 2 };
@@ -229,7 +262,34 @@ export const GameCanvas: React.FC = () => {
       ballVel.current.x = (ballVel.current.x / mag) * MAX_BALL_SPEED;
       ballVel.current.y = (ballVel.current.y / mag) * MAX_BALL_SPEED;
 
+      // Guard against near-zero horizontal velocity that would cause wall sticking
+      if (Math.abs(ballVel.current.x) < MIN_BALL_X_SPEED) {
+        ballVel.current.x = (Math.random() < 0.5 ? -1 : 1) * MIN_BALL_X_SPEED;
+        const mag2 = Math.hypot(ballVel.current.x, ballVel.current.y);
+        ballVel.current.x = (ballVel.current.x / mag2) * MAX_BALL_SPEED;
+        ballVel.current.y = (ballVel.current.y / mag2) * MAX_BALL_SPEED;
+      }
+
       drawFrame(ctx, bricksRef.current);
+
+      // Draw lives hearts top-left
+      ctx.save();
+      const livesNow = getLives();
+      const heartRadius = 6;
+      const spacing = 18;
+      for (let i = 0; i < livesNow; i++) {
+        const cx = 20 + i * spacing;
+        const cy = 20;
+        ctx.beginPath();
+        ctx.arc(cx - heartRadius / 2, cy, heartRadius, 0, Math.PI * 2);
+        ctx.arc(cx + heartRadius / 2, cy, heartRadius, 0, Math.PI * 2);
+        ctx.lineTo(cx, cy + heartRadius);
+        ctx.closePath();
+        ctx.fillStyle = '#ff4d6d';
+        ctx.fill();
+      }
+      ctx.restore();
+
       animationId = requestAnimationFrame(stepLoop);
     };
 
