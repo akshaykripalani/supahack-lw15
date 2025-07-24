@@ -32,13 +32,14 @@ function hashString(str: string): number {
 export function paragraphToBricks(
   paragraph: string,
   brickUnit = 16,
-  maxRowWidth = 760
+  maxRowWidth = 800,
+  yStart = 0
 ): Brick[] {
   const words = paragraph.trim().split(/\s+/);
   const bricks: Brick[] = [];
 
   let xCursor = 0;
-  let yCursor = 0;
+  let yCursor = yStart;
   const vPad = 2; // vertical padding between rows
   const hPad = 0; // we’ll stretch gaps later for justification
 

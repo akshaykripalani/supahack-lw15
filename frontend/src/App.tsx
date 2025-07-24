@@ -8,6 +8,7 @@ function App() {
   const startGame = useGameStore((s) => s.startGame);
   const gameState = useGameStore((s) => s.gameState);
   const score = useGameStore((s) => s.score);
+  const lives = useGameStore((s) => s.lives);
 
   return (
     <div

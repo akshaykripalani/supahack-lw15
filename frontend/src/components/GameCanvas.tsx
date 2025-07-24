@@ -18,7 +18,9 @@ export const GameCanvas: React.FC = () => {
   const bricks = useGameStore((s) => s.bricks);
   const gameState = useGameStore((s) => s.gameState);
   const destroyBrick = useGameStore((s) => s.destroyBrick);
-  const endGame = useGameStore((s) => s.endGame);
+  const loseLife = useGameStore((s) => s.loseLife);
+  const lives = useGameStore((s) => s.lives);
+  // endGame currently handled through loseLife
 
   // Persistent refs for paddle and ball state (avoid rerenders)
   const paddleX = useRef((CANVAS_WIDTH - PADDLE_WIDTH) / 2);
@@ -105,7 +107,7 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
       ctx.save();
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      if (gameState === 'ended') {
+      if (gameState === 'over') {
         // Draw Game Over message
         ctx.font = 'bold 40px "Segoe UI", Arial, sans-serif';
         ctx.fillStyle = '#fff';
@@ -204,12 +206,22 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
         }
       }
 
-      // Floor collision → game over
+      // Floor collision → lose life or game over
       if (ballPos.current.y - BALL_RADIUS > CANVAS_HEIGHT) {
-        endGame();
-        return; // stop loop
-      }
+        loseLife();
 
+        if (lives - 1 > 0) {
+          // reset ball & paddle positions and relaunch straight up
+          paddleX.current = (CANVAS_WIDTH - PADDLE_WIDTH) / 2;
+          ballPos.current = { x: CANVAS_WIDTH / 2, y: PADDLE_Y - BALL_RADIUS - 2 };
+          ballVel.current = { x: 0, y: -BASE_BALL_SPEED };
+          drawFrame(ctx, bricksRef.current);
+          animationId = requestAnimationFrame(stepLoop);
+          return;
+        }
+        // if no lives left, endGame already handled
+        return;
+      }
 
       // Calculate percentage completed
       const totalBricks = bricksRef.current.length;
@@ -227,10 +239,10 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
       animationId = requestAnimationFrame(stepLoop);
     };
 
-    // Reset paddle & ball positions at start of run
+    // Reset paddle & ball positions at start of run or life
     paddleX.current = (CANVAS_WIDTH - PADDLE_WIDTH) / 2;
     ballPos.current = { x: CANVAS_WIDTH / 2, y: PADDLE_Y - BALL_RADIUS - 2 };
-    ballVel.current = { x: BASE_BALL_SPEED, y: -BASE_BALL_SPEED };
+    ballVel.current = { x: 0, y: -BASE_BALL_SPEED };
 
     drawFrame(ctx, bricksRef.current);
     animationId = requestAnimationFrame(stepLoop);

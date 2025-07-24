@@ -12,10 +12,12 @@ interface GameStore {
   destroyed: number;
   totalBricks: number;
   startTime: number | null;
+  lives: number;
   gameState: GameState;
   startGame: (prompt: string) => Promise<void>;
   destroyBrick: (id: number) => void;
   endGame: () => void;
+  loseLife: () => void;
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -25,19 +27,21 @@ export const useGameStore = create<GameStore>((set, get) => ({
   destroyed: 0,
   totalBricks: 0,
   startTime: null,
+  lives: 3,
   gameState: 'idle',
 
   startGame: async (prompt: string) => {
     set({ gameState: 'loading', prompt });
     try {
       const paragraph = await fetchLayout(prompt);
-      const bricks = paragraphToBricks(paragraph, 16, 800);
+      const bricks = paragraphToBricks(paragraph, 16, 800, 50);
       set({
         bricks,
         totalBricks: bricks.length,
         destroyed: 0,
         score: 0,
         startTime: performance.now(),
+        lives: 3,
         gameState: 'running',
       });
     } catch (err) {
@@ -59,6 +63,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ bricks: newBricks, destroyed: newDestroyed, score });
 
     if (newDestroyed === totalBricks) {
+      get().endGame();
+    }
+  },
+
+  loseLife: () => {
+    const { lives } = get();
+    if (lives > 1) {
+      set({ lives: lives - 1 });
+      // Game will reset paddle/ball, bricks remain as-is
+    } else {
       get().endGame();
     }
   },
