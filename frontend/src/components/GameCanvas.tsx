@@ -184,16 +184,31 @@ export const GameCanvas: React.FC = () => {
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
 
-    const stepLoop = () => {
+    // Track time between frames so movement is time-based not frame-based.
+    const lastTimeRef = { current: performance.now() };
+
+    const stepLoop = (now: number) => {
+      // Convert the time delta to a scale factor relative to 60 fps so the
+      // existing velocity values (measured in px per 60 fps frame) continue to
+      // work unchanged.
+      const dt = (now - lastTimeRef.current) / 1000; // seconds
+      lastTimeRef.current = now;
+      const frameScale = dt * 60; // 1.0 when running at 60 fps, <1 on high-fps
+
       if (!useGameStore.getState().paused) {
         // Continuous paddle movement
-        const paddleSpeed = 6;
-        if (leftPressed.current) paddleX.current = Math.max(0, paddleX.current - paddleSpeed);
-        if (rightPressed.current) paddleX.current = Math.min(CANVAS_WIDTH - PADDLE_WIDTH, paddleX.current + paddleSpeed);
+        const paddleSpeed = 6; // px per 60 fps frame (legacy units)
+        if (leftPressed.current)
+          paddleX.current = Math.max(0, paddleX.current - paddleSpeed * frameScale);
+        if (rightPressed.current)
+          paddleX.current = Math.min(
+            CANVAS_WIDTH - PADDLE_WIDTH,
+            paddleX.current + paddleSpeed * frameScale,
+          );
 
-        // Update ball position
-        ballPos.current.x += ballVel.current.x;
-        ballPos.current.y += ballVel.current.y;
+        // Update ball position (legacy units → scale by frameScale)
+        ballPos.current.x += ballVel.current.x * frameScale;
+        ballPos.current.y += ballVel.current.y * frameScale;
       }
 
       // Wall collisions (left / right)
@@ -315,6 +330,7 @@ export const GameCanvas: React.FC = () => {
     ballVel.current = { x: 0, y: -BASE_BALL_SPEED };
 
     drawFrame(ctx, bricksRef.current);
+    // Seed the first frame with the timestamp that requestAnimationFrame passes.
     animationId = requestAnimationFrame(stepLoop);
 
     return () => {

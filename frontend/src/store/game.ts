@@ -52,7 +52,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ gameState: 'loading', prompt, hasSubmitted: false, isModalOpen: false });
     try {
       const paragraph = await fetchLayout(prompt);
-      const bricks = paragraphToBricks(paragraph, 16, 800, 50);
+      const bricks = paragraphToBricks(paragraph, 16, 800, 90);
       set({
         bricks,
         totalBricks: bricks.length,

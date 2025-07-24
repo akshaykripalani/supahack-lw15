@@ -151,6 +151,31 @@ function App() {
           >
             {gameState === 'loading' ? 'Loading…' : 'Start / Restart'}
           </button>
+
+          {/* Loading indicator */}
+          {gameState === 'loading' && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                marginTop: 12,
+              }}
+            >
+              <div
+                style={{
+                  width: 22,
+                  height: 22,
+                  border: '4px solid #7b4397',
+                  borderTop: '4px solid transparent',
+                  borderRadius: '50%',
+                  animation: 'logo-spin 1s linear infinite',
+                }}
+              />
+              <span style={{ color: '#7b4397', fontWeight: 600 }}>Generating layout…</span>
+            </div>
+          )}
           {/* Dev button removed for production */}
         </div>
         <div
