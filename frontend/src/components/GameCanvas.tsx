@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useGameStore } from '../store/game';
 import type { Brick } from '../utils/brick';
+import { SubmitLeaderboardModal } from './SubmitLeaderboardModal';
 
 const CANVAS_WIDTH = 800;
 const CANVAS_HEIGHT = 600;
@@ -184,14 +185,16 @@ export const GameCanvas: React.FC = () => {
     window.addEventListener('keyup', onKeyUp);
 
     const stepLoop = () => {
-      // Continuous paddle movement
-      const paddleSpeed = 6;
-      if (leftPressed.current) paddleX.current = Math.max(0, paddleX.current - paddleSpeed);
-      if (rightPressed.current) paddleX.current = Math.min(CANVAS_WIDTH - PADDLE_WIDTH, paddleX.current + paddleSpeed);
+      if (!useGameStore.getState().paused) {
+        // Continuous paddle movement
+        const paddleSpeed = 6;
+        if (leftPressed.current) paddleX.current = Math.max(0, paddleX.current - paddleSpeed);
+        if (rightPressed.current) paddleX.current = Math.min(CANVAS_WIDTH - PADDLE_WIDTH, paddleX.current + paddleSpeed);
 
-      // Update ball position
-      ballPos.current.x += ballVel.current.x;
-      ballPos.current.y += ballVel.current.y;
+        // Update ball position
+        ballPos.current.x += ballVel.current.x;
+        ballPos.current.y += ballVel.current.y;
+      }
 
       // Wall collisions (left / right)
       if (ballPos.current.x - BALL_RADIUS < 0) {
@@ -291,6 +294,19 @@ export const GameCanvas: React.FC = () => {
       ctx.restore();
 
       animationId = requestAnimationFrame(stepLoop);
+
+      // If paused, overlay text
+      if (useGameStore.getState().paused) {
+        ctx.save();
+        ctx.fillStyle = 'rgba(0,0,0,0.4)';
+        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        ctx.font = 'bold 48px "Segoe UI", Arial, sans-serif';
+        ctx.fillStyle = '#fff';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('Paused', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
+        ctx.restore();
+      }
     };
 
     // Reset paddle & ball positions at start of run or life
@@ -308,21 +324,75 @@ export const GameCanvas: React.FC = () => {
     };
   }, [gameState]);
 
+  const isModalOpen = useGameStore((s) => s.isModalOpen);
+  const openModal = useGameStore((s) => s.openModal);
+  const hasSubmitted = useGameStore((s) => s.hasSubmitted);
+  const paused = useGameStore((s) => s.paused);
+  const togglePause = useGameStore((s) => s.togglePause);
+
   return (
-    <canvas
-      ref={canvasRef}
-      width={CANVAS_WIDTH}
-      height={CANVAS_HEIGHT}
-      style={{
-        borderRadius: 18,
-        boxShadow: '0 8px 32px 0 rgba(161,140,209,0.18)',
-        border: '2.5px solid #a18cd1',
-        background: 'transparent',
-        outline: 'none',
-        margin: 0,
-        display: 'block',
-      }}
-      tabIndex={0}
-    />
+    <div style={{ position: 'relative' }}>
+      <canvas
+        ref={canvasRef}
+        width={CANVAS_WIDTH}
+        height={CANVAS_HEIGHT}
+        style={{
+          borderRadius: 18,
+          boxShadow: '0 8px 32px 0 rgba(161,140,209,0.18)',
+          border: '2.5px solid #a18cd1',
+          background: 'transparent',
+          outline: 'none',
+          margin: 0,
+          display: 'block',
+        }}
+        tabIndex={0}
+      />
+
+      {gameState === 'over' && !isModalOpen && !hasSubmitted && (
+        <button
+          style={{
+            position: 'absolute',
+            left: '50%',
+            bottom: 30,
+            transform: 'translateX(-50%)',
+            padding: '12px 20px',
+            background: '#43cea2',
+            color: '#fff',
+            border: 'none',
+            borderRadius: 8,
+            fontSize: 18,
+            fontWeight: 700,
+            cursor: 'pointer',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+          }}
+          onClick={openModal}
+        >
+          Submit to Leaderboard
+        </button>
+      )}
+
+      {gameState === 'running' && (
+        <button
+          style={{
+            position: 'absolute',
+            right: 16,
+            top: 16,
+            padding: '6px 10px',
+            background: '#a18cd1',
+            color: '#fff',
+            border: 'none',
+            borderRadius: 6,
+            fontSize: 14,
+            cursor: 'pointer',
+            boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
+          }}
+          onClick={togglePause}
+        >
+          {paused ? 'Resume' : 'Pause'}
+        </button>
+      )}
+
+      {isModalOpen && <SubmitLeaderboardModal />}
+    </div>
   );
 }; 

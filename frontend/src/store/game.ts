@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { Brick } from '../utils/brick';
 import { paragraphToBricks } from '../utils/brick';
 import { fetchLayout } from '../api/layout';
+import { submitScore } from '../api/leaderboard';
 
 type GameState = 'idle' | 'loading' | 'animating' | 'running' | 'over';
 
@@ -20,6 +21,16 @@ interface GameStore {
   revealNext: () => void;
   endGame: () => void;
   loseLife: () => void;
+  username: string;
+  setUsername: (name: string) => void;
+  devWin: () => void;
+  submitCurrentScore: (username: string) => Promise<void>;
+  isModalOpen: boolean;
+  openModal: () => void;
+  closeModal: () => void;
+  paused: boolean;
+  togglePause: () => void;
+  hasSubmitted: boolean;
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -32,9 +43,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
   lives: 3,
   gameState: 'idle',
   animationIndex: 0,
+  username: '',
+  isModalOpen: false,
+  paused: false,
+  hasSubmitted: false,
 
   startGame: async (prompt: string) => {
-    set({ gameState: 'loading', prompt });
+    set({ gameState: 'loading', prompt, hasSubmitted: false, isModalOpen: false });
     try {
       const paragraph = await fetchLayout(prompt);
       const bricks = paragraphToBricks(paragraph, 16, 800, 50);
@@ -94,10 +109,45 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
   },
 
-  endGame: () => {
-    const elapsedMs = performance.now() - (get().startTime ?? performance.now());
-    set({ gameState: 'over' });
-    console.log('Game over', { score: get().score, elapsedMs });
-    // TODO: Submit to Supabase leaderboard
+  setUsername: (name: string) => set({ username: name }),
+
+  devWin: async () => {
+    set({ hasSubmitted: false });
+    const randomScore = Math.floor(Math.random() * 101);
+    const randomElapsed = (60 + Math.floor(Math.random() * 120)) * 1000; // 1–3 min in ms
+    const now = performance.now();
+    set({
+      score: randomScore,
+      startTime: now - randomElapsed,
+      gameState: 'over',
+    });
+    get().openModal();
   },
+
+  endGame: () => {
+    const { startTime } = get();
+    const elapsedMs = performance.now() - (startTime ?? performance.now());
+    set({ gameState: 'over' });
+    console.log('Game over', { elapsedMs });
+  },
+
+  submitCurrentScore: async (username: string) => {
+    const { score, startTime, hasSubmitted } = get();
+    if (hasSubmitted) {
+      console.warn('Score already submitted');
+      return;
+    }
+    const elapsedMs = performance.now() - (startTime ?? performance.now());
+    try {
+      await submitScore(username, score, Math.round(elapsedMs));
+      set({ hasSubmitted: true });
+    } catch (err) {
+      console.error(err);
+    }
+  },
+
+  openModal: () => set({ isModalOpen: true }),
+  closeModal: () => set({ isModalOpen: false }),
+
+  togglePause: () => set((state) => ({ paused: !state.paused })),
 })); 

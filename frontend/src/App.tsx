@@ -1,12 +1,70 @@
 import { useState } from 'react';
 import { GameCanvas } from './components/GameCanvas';
 import { useGameStore } from './store/game';
+import { Leaderboard } from './components/Leaderboard';
+import { useEffect } from 'react';
 
 function App() {
   const [promptInput, setPromptInput] = useState('');
+  // username handled in modal now
   const startGame = useGameStore((s) => s.startGame);
+  const startTime = useGameStore((s) => s.startTime);
   const gameState = useGameStore((s) => s.gameState);
   const score = useGameStore((s) => s.score);
+
+  // mobile detection
+  const [isMobile, setIsMobile] = useState<boolean>(() => {
+    const ua = navigator.userAgent;
+    return /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua) || window.innerWidth < 700;
+  });
+
+  useEffect(() => {
+    const onResize = () => {
+      setIsMobile(window.innerWidth < 700);
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    let id: number | undefined;
+    if (gameState === 'running' || gameState === 'over') {
+      id = window.setInterval(() => {
+        if (startTime) {
+          setElapsed(Math.floor((performance.now() - startTime) / 1000));
+        }
+      }, 500);
+    } else {
+      setElapsed(0);
+    }
+    return () => {
+      if (id) clearInterval(id);
+    };
+  }, [gameState, startTime]);
+
+  const mm = String(Math.floor(elapsed / 60)).padStart(2, '0');
+  const ss = String(elapsed % 60).padStart(2, '0');
+
+  if (isMobile) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        background: '#f7f5fa',
+        padding: 24,
+        textAlign: 'center',
+      }}>
+        <h2 style={{ color: '#181818' }}>
+          Sorry, mobile devices are not supported yet.<br />
+          Please use a desktop or larger screen.
+        </h2>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -44,6 +102,7 @@ function App() {
           LLM Breakout
         </h2>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {/* Username input moved to modal */}
           <input
             style={{
               marginBottom: 0,
@@ -62,14 +121,13 @@ function App() {
             onChange={(e) => setPromptInput(e.target.value)}
             onKeyDown={(e) => {
               if (
-                e.key === 'Enter' &&
-                promptInput &&
-                gameState !== 'loading'
+                e.key === 'Enter' && promptInput && gameState !== 'loading'
               ) {
                 startGame(promptInput);
               }
             }}
           />
+          {/* Submit Score button moved to modal */}
           <button
             style={{
               width: '100%',
@@ -86,11 +144,14 @@ function App() {
               boxShadow: '0 2px 8px 0 rgba(161,140,209,0.10)',
               transition: 'opacity 0.2s',
             }}
-            onClick={() => startGame(promptInput)}
+            onClick={() => {
+              startGame(promptInput);
+            }}
             disabled={!promptInput || gameState === 'loading'}
           >
             {gameState === 'loading' ? 'Loading…' : 'Start / Restart'}
           </button>
+          {/* Dev button removed for production */}
         </div>
         <div
           style={{
@@ -109,12 +170,13 @@ function App() {
             Score: <span style={{ color: '#7b4397' }}>{score}%</span>
           </div>
           <div style={{ fontSize: 16, marginTop: 2, color: '#181818' }}>
-            State: <span style={{ color: gameState === 'running' ? '#43cea2' : gameState === 'loading' ? '#f7971e' : '#7b4397' }}>{gameState}</span>
+            Time: <span style={{ color: '#43cea2' }}>{mm}:{ss}</span>
           </div>
         </div>
         <div style={{ marginTop: 12, textAlign: 'center', color: '#181818', fontSize: 14, opacity: 0.7 }}>
           <span>Tip: Try prompts like "A neon city at night" or "A robot's morning routine"</span>
         </div>
+        <Leaderboard />
       </aside>
       <main
         style={{
