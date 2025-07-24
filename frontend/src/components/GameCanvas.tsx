@@ -102,25 +102,35 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
       ctx.fillStyle = '#232526';
       ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-      // Draw message
       ctx.save();
-      ctx.font = 'bold 40px "Segoe UI", Arial, sans-serif';
-      ctx.fillStyle = '#fff';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('Game Over', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 30);
+      if (gameState === 'ended') {
+        // Draw Game Over message
+        ctx.font = 'bold 40px "Segoe UI", Arial, sans-serif';
+        ctx.fillStyle = '#fff';
+        ctx.fillText('Game Over', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 30);
 
-      // Show score if available
-      const totalBricks = bricksRef.current.length;
-      const destroyedBricks = bricksRef.current.filter(b => b.destroyed).length;
-      const percent = totalBricks > 0 ? Math.round((destroyedBricks / totalBricks) * 100) : 0;
-      ctx.font = 'bold 28px "Segoe UI", Arial, sans-serif';
-      ctx.fillStyle = '#a18cd1';
-      ctx.fillText(`Score: ${percent}%`, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 20);
+        // Show score if available
+        const totalBricks = bricksRef.current.length;
+        const destroyedBricks = bricksRef.current.filter(b => b.destroyed).length;
+        const percent = totalBricks > 0 ? Math.round((destroyedBricks / totalBricks) * 100) : 0;
+        ctx.font = 'bold 28px "Segoe UI", Arial, sans-serif';
+        ctx.fillStyle = '#a18cd1';
+        ctx.fillText(`Score: ${percent}%`, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 20);
 
-      ctx.font = '20px "Segoe UI", Arial, sans-serif';
-      ctx.fillStyle = '#fff';
-      ctx.fillText('Press Start / Restart to play again', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 60);
+        ctx.font = '20px "Segoe UI", Arial, sans-serif';
+        ctx.fillStyle = '#fff';
+        ctx.fillText('Press Start / Restart to play again', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 60);
+      } else {
+        // Show welcome/instruction message
+        ctx.font = 'bold 36px "Segoe UI", Arial, sans-serif';
+        ctx.fillStyle = '#fff';
+        ctx.fillText('LLM Breakout', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 30);
+        ctx.font = '22px "Segoe UI", Arial, sans-serif';
+        ctx.fillStyle = '#a18cd1';
+        ctx.fillText('Enter a prompt and press Start to play!', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 20);
+      }
       ctx.restore();
       return;
     }
