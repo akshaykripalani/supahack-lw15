@@ -1,0 +1,15 @@
+[project]
+name = "breakout_backend"
+version = "0.1.0"
+requires-python = ">=3.9"
+
+# Runtime dependencies handled by uv
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "python-dotenv",
+    "google-genai>=1.27.0",
+]
+
+[tool.uv]
+# uv-specific settings can be added here 

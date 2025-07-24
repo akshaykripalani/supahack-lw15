@@ -1,0 +1,110 @@
+────────────────────────────────────────────────────────
+PROJECT BIBLE – LLM Breakout (v1.1)
+────────────────────────────────────────────────────────
+
+1. Vision
+   • Classic Breakout with a brick layout authored by an LLM (Gemini 2.5 Flash).  
+   • Players supply any prompt; the generated paragraph is converted into bricks—one brick per word (punctuation included).  
+   • Single round, no levels. Final score = percentage of bricks destroyed (0–100).
+
+2. Core Features
+   2.1 Gameplay (Browser Only)  
+       - Paddle, ball, bricks, lives.  
+       - One game session; on miss, game over.  
+   2.2 LLM-Driven Layout  
+       - Prompt → FastAPI micro-service → Gemini 2.5 Flash → paragraph (≤ 100 words).  
+       - Word list = bricks.  
+   2.3 Leaderboard  
+       - Username prompt (3–10 chars, no auth).  
+       - Supabase table: id, username, score, time_ms, created_at.  
+       - On submit:  
+         • If username absent → insert.  
+         • If username present & new score > existing → update.  
+         • Else ignore.  
+       - Top-10 shown in sidebar.  
+
+3. Tech Stack
+   • Frontend: Vite + React + TypeScript, HTML5 Canvas.  
+   • Backend: FastAPI (Python) querying Gemini 2.5 Flash.  
+   • Supabase JS SDK from frontend (public anon key).  
+   • State management: React context or Zustand (dev’s choice).  
+
+4. Brick Generation Spec
+   1. Receive paragraph P.  
+   2. Split on whitespace into words W₀…Wₙ-1 (punctuation stays).  
+   3. For each word:  
+      • width = clamp(len(Wᵢ), 2, 12) × brickUnit.  
+      • height = 1 × brickUnit.  
+      • row/col: sequential fill left→right, wrap at `bricksPerRow`.  
+      • color hue = hash(Wᵢ) % 360.  
+      • strength = 1 hit (no multi-hit bricks).  
+   4. BrickUnit ≈ 16 px; `bricksPerRow` chosen so canvas width is fully covered.
+
+5. Scoring & Timing
+   • `totalBricks = n`  
+   • `destroyed = d`  
+   • `score = round(100 × d / n)`  
+   • Record `elapsed_ms` from ball launch to game-over.
+
+6. Networking Paths
+   • `POST /api/layout` (FastAPI) → `{ prompt }` → `{ paragraph }`  
+   • Supabase client in browser:  
+     – `insert` or `upsert` with conditional score logic handled in RPC `upsert_score(username, score, time_ms)` for atomicity.
+
+7. Minimal UI
+   • Left panel: prompt field, Start/Restart, leaderboard list.  
+   • Right: canvas.  
+   • No theming/accessibility guarantees beyond default browser focus order.
+
+8. Dev Environment (Win 11 + PowerShell)
+   ```powershell
+   # frontend
+   git clone <repo>
+   cd repo/packages/web
+   pnpm install
+   pnpm dev
+
+   # backend
+   cd ../server
+   uv init        # create pyproject.toml
+   uv venv
+   actvenv
+   uv add fastapi uvicorn google-generativeai supabase-py python-dotenv
+   uv run uvicorn app:app --reload
+   ```
+
+9. FastAPI Sketch
+   ```python
+   # app.py
+   from fastapi import FastAPI
+   from pydantic import BaseModel
+   from google.generativeai import GenerativeModel
+
+   app = FastAPI()
+   model = GenerativeModel("gemini-2.5-flash")
+
+   class Prompt(BaseModel):
+       prompt: str
+
+   @app.post("/api/layout")
+   async def layout(p: Prompt):
+       resp = model.generate_content(
+           [f"Write a vivid <100-word paragraph describing: {p.prompt}"]
+       )
+       return {"paragraph": resp.text}
+   ```
+
+10. Nice-to-Have (optional, not required)
+    • Sound effects  
+    • Simple power-ups (extra life, wider paddle)  
+    • Animation polish
+
+11. Out-of-Scope
+    – Levels, power-ups beyond optional note  
+    – Authentication or user accounts  
+    – Accessibility/i18n audits  
+    – Extensive automated tests
+
+────────────────────────────────────────────────────────
+End of Document (v1.1)
+────────────────────────────────────────────────────────
