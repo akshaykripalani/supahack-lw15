@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { GameCanvas } from './components/GameCanvas';
 import { useGameStore } from './store/game';
@@ -8,7 +7,6 @@ function App() {
   const startGame = useGameStore((s) => s.startGame);
   const gameState = useGameStore((s) => s.gameState);
   const score = useGameStore((s) => s.score);
-  const lives = useGameStore((s) => s.lives);
 
   return (
     <div
@@ -111,7 +109,7 @@ function App() {
             Score: <span style={{ color: '#7b4397' }}>{score}%</span>
           </div>
           <div style={{ fontSize: 16, marginTop: 2, color: '#181818' }}>
-            State: <span style={{ color: gameState === 'playing' ? '#43cea2' : gameState === 'loading' ? '#f7971e' : '#7b4397' }}>{gameState}</span>
+            State: <span style={{ color: gameState === 'running' ? '#43cea2' : gameState === 'loading' ? '#f7971e' : '#7b4397' }}>{gameState}</span>
           </div>
         </div>
         <div style={{ marginTop: 12, textAlign: 'center', color: '#181818', fontSize: 14, opacity: 0.7 }}>

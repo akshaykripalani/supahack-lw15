@@ -25,67 +25,68 @@ export const GameCanvas: React.FC = () => {
   // Persistent refs for paddle and ball state (avoid rerenders)
   const paddleX = useRef((CANVAS_WIDTH - PADDLE_WIDTH) / 2);
   const ballPos = useRef({ x: CANVAS_WIDTH / 2, y: PADDLE_Y - BALL_RADIUS - 2 });
-  const ballVel = useRef({ x: 3, y: -3 });
+  const ballVel = useRef({ x: 3, y: -BASE_BALL_SPEED });
 
   // Draw helper
-const drawFrame = (ctx: CanvasRenderingContext2D, bricksToRender: Brick[]) => {
-  // Draw solid background
-  ctx.fillStyle = '#232526';
-  ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+  // Draw helper
+  const drawFrame = (ctx: CanvasRenderingContext2D, bricksToRender: Brick[]) => {
+    // Draw solid background
+    ctx.fillStyle = '#232526';
+    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-  // Draw bricks with solid color and rounded corners
-  bricksToRender.forEach((brick) => {
-    if (brick.destroyed) return;
+    // Draw bricks with solid color and rounded corners
+    bricksToRender.forEach((brick) => {
+      if (brick.destroyed) return;
+      ctx.save();
+      // Brick fill (solid)
+      ctx.fillStyle = brick.color;
+      roundRect(ctx, brick.x, brick.y, brick.width, brick.height, 7);
+      ctx.fill();
+      // Border
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#222';
+      roundRect(ctx, brick.x, brick.y, brick.width, brick.height, 7);
+      ctx.stroke();
+      // Word text (centered, bold, no shadow)
+      ctx.font = 'bold 13px "Segoe UI", Arial, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#fff';
+      ctx.fillText(brick.text, brick.x + brick.width / 2, brick.y + brick.height / 2);
+      ctx.restore();
+    });
+
+    // Draw paddle (solid color)
     ctx.save();
-    // Brick fill (solid)
-    ctx.fillStyle = brick.color;
-    roundRect(ctx, brick.x, brick.y, brick.width, brick.height, 7);
+    ctx.fillStyle = '#a18cd1';
+    roundRect(ctx, paddleX.current, PADDLE_Y, PADDLE_WIDTH, PADDLE_HEIGHT, 8);
     ctx.fill();
-    // Border
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = '#222';
-    roundRect(ctx, brick.x, brick.y, brick.width, brick.height, 7);
-    ctx.stroke();
-    // Word text (centered, bold, no shadow)
-    ctx.font = 'bold 13px "Segoe UI", Arial, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#fff';
-    ctx.fillText(brick.text, brick.x + brick.width / 2, brick.y + brick.height / 2);
     ctx.restore();
-  });
 
-  // Draw paddle (solid color)
-  ctx.save();
-  ctx.fillStyle = '#a18cd1';
-  roundRect(ctx, paddleX.current, PADDLE_Y, PADDLE_WIDTH, PADDLE_HEIGHT, 8);
-  ctx.fill();
-  ctx.restore();
+    // Draw ball (solid color)
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(ballPos.current.x, ballPos.current.y, BALL_RADIUS, 0, Math.PI * 2);
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+    ctx.closePath();
+    ctx.restore();
+  };
 
-  // Draw ball (solid color)
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(ballPos.current.x, ballPos.current.y, BALL_RADIUS, 0, Math.PI * 2);
-  ctx.fillStyle = '#fff';
-  ctx.fill();
-  ctx.closePath();
-  ctx.restore();
-};
-
-// Helper for rounded rectangles
-function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
-}
+  // Helper for rounded rectangles
+  function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+  }
 
   const bricksRef = useRef<Brick[]>(bricks);
 
@@ -223,17 +224,10 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
         return;
       }
 
-      // Calculate percentage completed
-      const totalBricks = bricksRef.current.length;
-      const destroyedBricks = bricksRef.current.filter(b => b.destroyed).length;
-      const percentComplete = totalBricks > 0 ? destroyedBricks / totalBricks : 0;
-      // Ball speed increases linearly from BASE_BALL_SPEED to MAX_BALL_SPEED
-      const currentBallSpeed = BASE_BALL_SPEED + (MAX_BALL_SPEED - BASE_BALL_SPEED) * percentComplete;
-
       // Ensure ball speed constant
       const mag = Math.hypot(ballVel.current.x, ballVel.current.y);
-      ballVel.current.x = (ballVel.current.x / mag) * currentBallSpeed;
-      ballVel.current.y = (ballVel.current.y / mag) * currentBallSpeed;
+      ballVel.current.x = (ballVel.current.x / mag) * MAX_BALL_SPEED;
+      ballVel.current.y = (ballVel.current.y / mag) * MAX_BALL_SPEED;
 
       drawFrame(ctx, bricksRef.current);
       animationId = requestAnimationFrame(stepLoop);
