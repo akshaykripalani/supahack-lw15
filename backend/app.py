@@ -31,7 +31,7 @@ async def layout(p: Prompt):
     """The following is a user prompt to create the bricks in an LLM-powered version of breakout.
     This prompt is describing the theme of the content they want. I.E. Your bricks will describe 
     a short story, or short paragraph about the prompt that has been provided. Ensure the
-    length of your output is approximately 100 words or less."""
+    length of your output is approximately 75 words or less."""
     try:
         resp = client.models.generate_content(
             model="gemini-2.5-flash",
