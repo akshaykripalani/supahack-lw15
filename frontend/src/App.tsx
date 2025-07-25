@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { GameCanvas } from './components/GameCanvas';
+import slopIcon from './assets/slop.png';
 import { useGameStore } from './store/game';
 import { Leaderboard } from './components/Leaderboard';
 import { useEffect } from 'react';
@@ -277,7 +278,7 @@ function App() {
           }
         }}
       >
-        <img src="/slop.png" alt="in" style={{ width: 18, height: 18, marginRight: 8, verticalAlign: 'middle' }} />
+        <img src={slopIcon} alt="in" style={{ width: 18, height: 18, marginRight: 8, verticalAlign: 'middle' }} />
         {slopMode ? 'De-slop' : 'Slopify'}
       </button>
     </div>
