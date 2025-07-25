@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { Brick } from '../utils/brick';
 import { paragraphToBricks } from '../utils/brick';
+import { getRandomSlopParagraph } from '../utils/slopWords';
 import { fetchLayout } from '../api/layout';
 import { submitScore } from '../api/leaderboard';
 
@@ -31,6 +32,9 @@ interface GameStore {
   paused: boolean;
   togglePause: () => void;
   hasSubmitted: boolean;
+  slopMode: boolean;
+  startSlopGame: () => void;
+  endSlopMode: () => void;
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -47,6 +51,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   isModalOpen: false,
   paused: false,
   hasSubmitted: false,
+  slopMode: false,
 
   startGame: async (prompt: string) => {
     set({ gameState: 'loading', prompt, hasSubmitted: false, isModalOpen: false });
@@ -69,8 +74,43 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
   },
 
+  startSlopGame: () => {
+    // Pre-determined LinkedIn slop paragraph
+    const paragraph = getRandomSlopParagraph();
+    let bricks = paragraphToBricks(paragraph, 16, 800, 90);
+    bricks = bricks.map((b) => ({ ...b, visible: false }));
+    set({
+      slopMode: true,
+      bricks,
+      totalBricks: bricks.length,
+      destroyed: 0,
+      score: 0,
+      startTime: performance.now(),
+      lives: 3,
+      animationIndex: 0,
+      gameState: 'animating',
+      hasSubmitted: false,
+    });
+  },
+
+  endSlopMode: () => {
+    set({
+      slopMode: false,
+      bricks: [],
+      prompt: '',
+      score: 0,
+      destroyed: 0,
+      totalBricks: 0,
+      startTime: null,
+      lives: 3,
+      gameState: 'idle',
+      animationIndex: 0,
+      hasSubmitted: false,
+    });
+  },
+
   destroyBrick: (id: number) => {
-    const { bricks, destroyed, totalBricks } = get();
+    const { bricks, destroyed, totalBricks, slopMode } = get();
     const idx = bricks.findIndex((b) => b.id === id);
     if (idx === -1 || bricks[idx].destroyed) return;
 
@@ -79,7 +119,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const newDestroyed = destroyed + 1;
     const score = Math.round((100 * newDestroyed) / totalBricks);
 
-    set({ bricks: newBricks, destroyed: newDestroyed, score });
+    // Skip score updates while in slop mode.
+    set({ bricks: newBricks, destroyed: newDestroyed, score: slopMode ? 0 : score });
 
     if (newDestroyed === totalBricks) {
       get().endGame();
@@ -132,7 +173,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   submitCurrentScore: async (username: string) => {
-    const { score, startTime, hasSubmitted } = get();
+    const { score, startTime, hasSubmitted, slopMode } = get();
+    if (slopMode) return; // Disable score submission in slop mode
     if (hasSubmitted) {
       console.warn('Score already submitted');
       return;
@@ -146,7 +188,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
   },
 
-  openModal: () => set({ isModalOpen: true }),
+  openModal: () => {
+    if (!get().slopMode) {
+      set({ isModalOpen: true });
+    }
+  },
   closeModal: () => set({ isModalOpen: false }),
 
   togglePause: () => set((state) => ({ paused: !state.paused })),

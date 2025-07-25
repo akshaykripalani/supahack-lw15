@@ -11,6 +11,9 @@ function App() {
   const startTime = useGameStore((s) => s.startTime);
   const gameState = useGameStore((s) => s.gameState);
   const score = useGameStore((s) => s.score);
+  const slopMode = useGameStore((s) => s.slopMode);
+  const startSlopGame = useGameStore((s) => s.startSlopGame);
+  const endSlopMode = useGameStore((s) => s.endSlopMode);
 
   // mobile detection
   const [isMobile, setIsMobile] = useState<boolean>(() => {
@@ -123,7 +126,11 @@ function App() {
               if (
                 e.key === 'Enter' && promptInput && gameState !== 'loading'
               ) {
-                startGame(promptInput);
+                if (slopMode) {
+                  startSlopGame();
+                } else {
+                  startGame(promptInput);
+                }
               }
             }}
           />
@@ -139,15 +146,19 @@ function App() {
               fontWeight: 700,
               fontSize: 18,
               letterSpacing: 0.5,
-              cursor: !promptInput || gameState === 'loading' ? 'not-allowed' : 'pointer',
-              opacity: !promptInput || gameState === 'loading' ? 0.6 : 1,
+              cursor: (!slopMode && !promptInput) || gameState === 'loading' ? 'not-allowed' : 'pointer',
+              opacity: (!slopMode && !promptInput) || gameState === 'loading' ? 0.6 : 1,
               boxShadow: '0 2px 8px 0 rgba(161,140,209,0.10)',
               transition: 'opacity 0.2s',
             }}
             onClick={() => {
-              startGame(promptInput);
+              if (slopMode) {
+                startSlopGame();
+              } else {
+                startGame(promptInput);
+              }
             }}
-            disabled={!promptInput || gameState === 'loading'}
+            disabled={(!slopMode && !promptInput) || gameState === 'loading'}
           >
             {gameState === 'loading' ? 'Loading…' : 'Start / Restart'}
           </button>
@@ -178,30 +189,32 @@ function App() {
           )}
           {/* Dev button removed for production */}
         </div>
-        <div
-          style={{
-            marginTop: 8,
-            background: '#e9e4f0',
-            borderRadius: 10,
-            padding: '18px 16px',
-            boxShadow: '0 2px 8px 0 rgba(161,140,209,0.08)',
-            color: '#181818',
-            fontWeight: 500,
-            fontSize: 18,
-            textAlign: 'center',
-          }}
-        >
-          <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 4, color: '#181818' }}>
-            Score: <span style={{ color: '#7b4397' }}>{score}%</span>
+        {!slopMode && (
+          <div
+            style={{
+              marginTop: 8,
+              background: '#e9e4f0',
+              borderRadius: 10,
+              padding: '18px 16px',
+              boxShadow: '0 2px 8px 0 rgba(161,140,209,0.08)',
+              color: '#181818',
+              fontWeight: 500,
+              fontSize: 18,
+              textAlign: 'center',
+            }}
+          >
+            <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 4, color: '#181818' }}>
+              Score: <span style={{ color: '#7b4397' }}>{score}%</span>
+            </div>
+            <div style={{ fontSize: 16, marginTop: 2, color: '#181818' }}>
+              Time: <span style={{ color: '#43cea2' }}>{mm}:{ss}</span>
+            </div>
           </div>
-          <div style={{ fontSize: 16, marginTop: 2, color: '#181818' }}>
-            Time: <span style={{ color: '#43cea2' }}>{mm}:{ss}</span>
-          </div>
-        </div>
+        )}
         <div style={{ marginTop: 12, textAlign: 'center', color: '#181818', fontSize: 14, opacity: 0.7 }}>
           <span>Tip: Try prompts like "A neon city at night" or "A robot's morning routine"</span>
         </div>
-        <Leaderboard />
+        {!slopMode && <Leaderboard />}
       </aside>
       <main
         style={{
@@ -232,14 +245,43 @@ function App() {
           opacity: 0.92,
         }}>
           <b>How to Play:</b><br />
-          Craft a prompt for the LLM (Large Language Model) that produces the fewest possible words.<br />
-          Each word generated appears as a brick in the breakout game.<br />
-          Score <b>100%</b> by minimizing bricks and clearing them quickly—the faster and more concise your prompt, the higher your score!
+          Welcome to LLM Breakout! A tastefully sloppy homage to the classic arcade game.<br />
+          Type a prompt to build your own bricks, press <i>Start</i>, and break all the bricks with the ball & your ← → keys.<br />
+          <span style={{ fontSize: 10 }}>(Pssst… click <b>Slopify</b> for a surprise 😉)</span>
         </div>
       </div>
         <GameCanvas />
       </main>
+      {/* Slopify button fixed viewport */}
+      <button
+        style={{
+          position: 'fixed',
+          top: 16,
+          right: 16,
+          padding: '10px 16px',
+          background: '#0A66C2',
+          color: '#fff',
+          border: 'none',
+          borderRadius: 6,
+          fontSize: 16,
+          fontWeight: 700,
+          cursor: 'pointer',
+          boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+          zIndex: 1000,
+        }}
+        onClick={() => {
+          if (slopMode) {
+            endSlopMode();
+          } else {
+            startSlopGame();
+          }
+        }}
+      >
+        <img src="/slop.png" alt="in" style={{ width: 18, height: 18, marginRight: 8, verticalAlign: 'middle' }} />
+        {slopMode ? 'De-slop' : 'Slopify'}
+      </button>
     </div>
+
   );
 }
 
