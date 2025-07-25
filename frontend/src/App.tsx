@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { GameCanvas } from './components/GameCanvas';
-import slopIcon from './assets/slop.png';
+import slopIcon from '../slop.png';
 import { useGameStore } from './store/game';
 import { Leaderboard } from './components/Leaderboard';
 import { useEffect } from 'react';
