@@ -210,8 +210,33 @@ function App() {
           justifyContent: 'center',
           alignItems: 'center',
           background: '#f7f5fa',
+          flexDirection: 'column',
+          gap: 24,
         }}
       >
+        <div style={{
+        width: '100%',
+        maxWidth: 900,
+        margin: '0 auto',
+        marginTop: 32,
+        marginBottom: -16,
+      }}>
+        <div style={{
+          background: '#f7f5fa',
+          borderRadius: 10,
+          padding: '14px 12px',
+          boxShadow: '0 1px 4px 0 rgba(161,140,209,0.07)',
+          color: '#181818',
+          fontSize: 15,
+          textAlign: 'center',
+          opacity: 0.92,
+        }}>
+          <b>How to Play:</b><br />
+          Craft a prompt for the LLM (Large Language Model) that produces the fewest possible words.<br />
+          Each word generated appears as a brick in the breakout game.<br />
+          Score <b>100%</b> by minimizing bricks and clearing them quickly—the faster and more concise your prompt, the higher your score!
+        </div>
+      </div>
         <GameCanvas />
       </main>
     </div>
