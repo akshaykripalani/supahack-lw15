@@ -35,7 +35,10 @@ async def layout(p: Prompt):
     try:
         resp = client.models.generate_content(
             model="gemini-2.5-flash",
-            contents=f"Write a vivid <100-word paragraph describing: {p.prompt}"
+            contents=f"The following is a user prompt to create the bricks in an LLM-powered version of breakout.
+    This prompt is describing the theme of the content they want. I.E. Your bricks will describe 
+    a short story, or short paragraph about the prompt that has been provided. Ensure the
+    length of your output is approximately 75 words or less. The prompt is: {p.prompt}"
         )
         paragraph = resp.text
     except Exception as exc:
