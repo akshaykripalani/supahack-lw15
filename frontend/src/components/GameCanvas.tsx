@@ -14,6 +14,9 @@ const BASE_BALL_SPEED = 7; // 10% slower than previous 8
 const MAX_BALL_SPEED = 7;
 const MIN_BALL_X_SPEED = 1; // avoid perfectly vertical trajectories
 
+// Number of extra balls spawned in slop mode (primary ball + this count = 9)
+const EXTRA_BALL_COUNT = 8;
+
 export const GameCanvas: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -334,9 +337,9 @@ export const GameCanvas: React.FC = () => {
           ballPos.current = { x: CANVAS_WIDTH / 2, y: PADDLE_Y - BALL_RADIUS - 2 };
           ballVel.current = { x: 0, y: -BASE_BALL_SPEED };
 
-          // reset extra balls too
+          // reset extra balls too (maintain 9 total: 1 primary + 8 extras)
           extraBalls.current = [];
-          for (let i = 0; i < 4; i++) {
+          for (let i = 0; i < EXTRA_BALL_COUNT; i++) {
             const angle = (Math.PI / 4) + (i * Math.PI / 10);
             extraBalls.current.push({
               x: CANVAS_WIDTH / 2,
@@ -497,7 +500,7 @@ export const GameCanvas: React.FC = () => {
     // Initialize extra balls in slop mode
     if (useGameStore.getState().slopMode) {
       extraBalls.current = [];
-      for (let i = 0; i < 4; i++) {
+      for (let i = 0; i < EXTRA_BALL_COUNT; i++) {
         const angle = (Math.PI / 4) + (i * Math.PI / 10); // spread angles
         extraBalls.current.push({
           x: CANVAS_WIDTH / 2,
